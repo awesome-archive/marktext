@@ -10,12 +10,6 @@
       :step="1"
       :onChange="value => onSelectChange('fontSize', value)"
     ></range>
-    <cur-select
-      description="The used font in the editor."
-      :value="editorFontFamily"
-      :options="editorFontFamilyOptions"
-      :onChange="value => onSelectChange('editorFontFamily', value)"
-    ></cur-select>
     <range
       description="Line height of editor lines."
       :value="lineHeight"
@@ -24,6 +18,39 @@
       :step="0.1"
       :onChange="value => onSelectChange('lineHeight', value)"
     ></range>
+    <font-text-box
+      description="The used font in the editor."
+      :value="editorFontFamily"
+      :onChange="value => onSelectChange('editorFontFamily', value)"
+    ></font-text-box>
+    <separator></separator>
+    <range
+      description="The code block font size in editor."
+      :value="codeFontSize"
+      :min="12"
+      :max="28"
+      unit="px"
+      :step="1"
+      :onChange="value => onSelectChange('codeFontSize', value)"
+    ></range>
+    <font-text-box
+      description="The used code block font in the editor."
+      :onlyMonospace="true"
+      :value="codeFontFamily"
+      :onChange="value => onSelectChange('codeFontFamily', value)"
+    ></font-text-box>
+    <!-- FIXME: Disabled due to #1648. -->
+    <bool
+      v-show="false"
+      description="Whether to show the code block line numbers."
+      :bool="codeBlockLineNumbers"
+      :onChange="value => onSelectChange('codeBlockLineNumbers', value)"
+    ></bool>
+    <bool
+      description="Trim the beginning and ending empty lines in code block when open markdown."
+      :bool="trimUnnecessaryCodeBlockEmptyLines"
+      :onChange="value => onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)"
+    ></bool>
     <separator></separator>
     <bool
       description="Automatically brackets when editing."
@@ -42,45 +69,52 @@
     ></bool>
     <separator></separator>
     <cur-select
-      description="The default end of line character, if you select default, which will be selected according to your system intelligence."
+      description="The default end of line character. If you select default, the ending will be selected according to your system intelligence."
       :value="endOfLine"
       :options="endOfLineOptions"
       :onChange="value => onSelectChange('endOfLine', value)"
     ></cur-select>
+    <separator></separator>
+    <cur-select
+      description="The default file encoding."
+      :value="defaultEncoding"
+      :options="defaultEncodingOptions"
+      :onChange="value => onSelectChange('defaultEncoding', value)"
+    ></cur-select>
+    <bool
+      description="Try to automatically guess the file encoding when opening files."
+      :bool="autoGuessEncoding"
+      :onChange="value => onSelectChange('autoGuessEncoding', value)"
+    ></bool>
+    <cur-select
+      description="Whether a single trailing newline should be ensured or trailing newlines should be removed."
+      :value="trimTrailingNewline"
+      :options="trimTrailingNewlineOptions"
+      :onChange="value => onSelectChange('trimTrailingNewline', value)"
+    ></cur-select>
+    <separator></separator>
     <cur-select
       description="The writing text direction."
       :value="textDirection"
       :options="textDirectionOptions"
       :onChange="value => onSelectChange('textDirection', value)"
     ></cur-select>
-    <separator></separator>
-    <range
-      description="The code block font size in editor."
-      :value="codeFontSize"
-      :min="12"
-      :max="28"
-      unit="px"
-      :step="1"
-      :onChange="value => onSelectChange('codeFontSize', value)"
-    ></range>
-    <cur-select
-      description="The used code block font in the editor."
-      :value="codeFontFamily"
-      :options="codeFontFamilyOptions"
-      :onChange="value => onSelectChange('codeFontFamily', value)"
-    ></cur-select>
-    <separator></separator>
     <bool
       description="Hide hint for quickly creating paragraphs."
-      :input="hideQuickInsertHint"
+      :bool="hideQuickInsertHint"
       :onChange="value => onSelectChange('hideQuickInsertHint', value)"
+    ></bool>
+    <bool
+      description="Hide link popup when the cursor is hover on the link."
+      :bool="hideLinkPopup"
+      :onChange="value => onSelectChange('hideLinkPopup', value)"
     ></bool>
     <separator></separator>
     <text-box
       description="Defines the maximum editor area width. An empty string or suffixes of ch (characters), px (pixels) or % (percentage) are allowed."
       :input="editorLineWidth"
       :regexValidator="/^(?:$|[0-9]+(?:ch|px|%)$)/"
-      defaultValue="The default value from the current theme"
+      defaultValue="Default value from current theme"
       :onChange="value => onSelectChange('editorLineWidth', value)"
     ></text-box>
   </div>
@@ -88,20 +122,22 @@
 
 <script>
 import { mapState } from 'vuex'
+import FontTextBox from '../common/fontTextBox'
 import Range from '../common/range'
 import CurSelect from '../common/select'
 import Bool from '../common/bool'
 import Separator from '../common/separator'
 import TextBox from '../common/textBox'
 import {
-  editorFontFamilyOptions,
   endOfLineOptions,
   textDirectionOptions,
-  codeFontFamilyOptions
+  trimTrailingNewlineOptions,
+  getDefaultEncodingOptions
 } from './config'
 
 export default {
   components: {
+    FontTextBox,
     Range,
     CurSelect,
     Bool,
@@ -109,10 +145,10 @@ export default {
     TextBox
   },
   data () {
-    this.editorFontFamilyOptions = editorFontFamilyOptions
     this.endOfLineOptions = endOfLineOptions
     this.textDirectionOptions = textDirectionOptions
-    this.codeFontFamilyOptions = codeFontFamilyOptions
+    this.trimTrailingNewlineOptions = trimTrailingNewlineOptions
+    this.defaultEncodingOptions = getDefaultEncodingOptions()
     return {}
   },
   computed: {
@@ -127,8 +163,14 @@ export default {
       textDirection: state => state.preferences.textDirection,
       codeFontSize: state => state.preferences.codeFontSize,
       codeFontFamily: state => state.preferences.codeFontFamily,
+      codeBlockLineNumbers: state => state.preferences.codeBlockLineNumbers,
+      trimUnnecessaryCodeBlockEmptyLines: state => state.preferences.trimUnnecessaryCodeBlockEmptyLines,
       hideQuickInsertHint: state => state.preferences.hideQuickInsertHint,
-      editorLineWidth: state => state.preferences.editorLineWidth
+      hideLinkPopup: state => state.preferences.hideLinkPopup,
+      editorLineWidth: state => state.preferences.editorLineWidth,
+      defaultEncoding: state => state.preferences.defaultEncoding,
+      autoGuessEncoding: state => state.preferences.autoGuessEncoding,
+      trimTrailingNewline: state => state.preferences.trimTrailingNewline
     })
   },
   methods: {
@@ -144,7 +186,7 @@ export default {
     & h4 {
       text-transform: uppercase;
       margin: 0;
-      font-weight: 100;
+      font-weight: 400;
     }
     & .image-ctrl {
       font-size: 14px;

@@ -1,4 +1,4 @@
-# Linux installation instructions
+# Linux Installation Instructions
 
 ## AppImage
 
@@ -11,6 +11,10 @@ Download the AppImage and type the following:
 ### Installation
 
 You cannot really install an AppImage. It's just a file which can be integrated with your desktop environment. The only thing you have to do is to create a desktop file that link to Mark Text (like `~/.local/share/applications/appimage-marktext.desktop`).
+
+##### System integration
+
+You can integrate the AppImage into the system via AppImageLauncher.
 
 ### Uninstallation
 
